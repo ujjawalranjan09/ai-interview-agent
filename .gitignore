@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Outputs (regenerable)
+outputs/reports/*.pdf
+outputs/recordings/*.wav
+outputs/recordings/*.mp3
+outputs/graphs/*.html
+outputs/temp/
+
+# MongoDB data
+data/db/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Model cache
+.cache/
+models/
+
+# Docker
+.docker/
