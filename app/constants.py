@@ -33,7 +33,7 @@ STATE_TRANSITIONS = {
     ],
     InterviewState.GENERATING_FOLLOWUP: [InterviewState.ASKING_FOLLOWUP, InterviewState.SELECTING_NEXT_QUESTION],
     InterviewState.ASKING_FOLLOWUP: [InterviewState.LISTENING_FOLLOWUP],
-    InterviewState.LISTING_FOLLOWUP: [InterviewState.PROCESSING_ANSWER],
+    InterviewState.LISTENING_FOLLOWUP: [InterviewState.PROCESSING_ANSWER],
     InterviewState.SELECTING_NEXT_QUESTION: [
         InterviewState.ASKING_QUESTION,
         InterviewState.CLOSING,

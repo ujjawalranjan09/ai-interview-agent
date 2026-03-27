@@ -92,7 +92,7 @@ class DifficultyManager:
             "current_level": self.current_level,
             "current_level_name": self.difficulty_name,
             "rolling_average": round(self._rolling_average, 1),
-            "overall_average": round(self.average_score, 1),
+            "average_score": round(self.average_score, 1),
             "total_scores": len(self.score_history),
             "score_history": self.score_history.copy(),
             "level_history": self.level_history.copy(),

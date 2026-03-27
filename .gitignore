@@ -51,3 +51,11 @@ models/
 
 # Docker
 .docker/
+
+# Test & output artifacts
+outputs/
+test_modules.py
+__pycache__/
+*.pyc
+venv/
+.pytest_cache/

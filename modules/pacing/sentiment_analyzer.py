@@ -313,17 +313,18 @@ class SentimentAnalyzer:
         if any(phrase in text_lower for phrase in _CONFUSED_TEXT):
             return SentimentLabel.CONFUSED
 
+        # Check voice-specific nervousness BEFORE disengaged,
+        # since rapid/low-energy speech is a stronger nervous signal
+        if "voice" in available:
+            voice = available["voice"]
+            if voice < -0.4:
+                return SentimentLabel.NERVOUS
+
         if any(phrase in text_lower for phrase in _DISENGAGED_TEXT) and combined < 0:
             return SentimentLabel.DISENGAGED
 
         if any(phrase in text_lower for phrase in _ENGAGED_TEXT):
             return SentimentLabel.ENGAGED
-
-        # Check voice-specific nervousness
-        if "voice" in available:
-            voice = available["voice"]
-            if voice < -0.4:
-                return SentimentLabel.NERVOUS
 
         # Classify by combined score
         if combined >= 0.4:
