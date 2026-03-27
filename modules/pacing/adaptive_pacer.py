@@ -70,7 +70,7 @@ _SENTIMENT_STRATEGIES: Dict[SentimentLabel, List[Dict[str, Any]]] = {
     ],
     SentimentLabel.CONFIDENT: [
         {
-            "action": PacingActionType.SKIP_TO_HARDER,
+            "action": PacingActionType.INCREASE_DIFFICULTY,
             "reason": "Candidate is confident — skip easy questions",
             "detail": "Move to higher difficulty to get a better assessment.",
             "tts_speed": 1.0,

@@ -247,3 +247,149 @@ ALL_SKILLS = []
 for category_skills in SKILL_TAXONOMY.values():
     ALL_SKILLS.extend(category_skills)
 ALL_SKILLS = list(set(ALL_SKILLS))
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Copilot Suggestion Templates
+# ═══════════════════════════════════════════════════════════════════════
+
+COPILOT_SUGGESTION_TEMPLATES = {
+    "follow_up": {
+        "icon": "🔄",
+        "color": "#3498db",
+        "templates": [
+            "Ask follow-up about {topic}",
+            "Probe deeper into {topic} — candidate may have more to share",
+            "The candidate mentioned {topic} briefly — explore further",
+            "Follow up on {topic} to assess depth of understanding",
+        ],
+    },
+    "probe_deeper": {
+        "icon": "🔍",
+        "color": "#9b59b6",
+        "templates": [
+            "Candidate seems strong in {skill}, probe deeper",
+            "Ask about trade-offs or edge cases in {skill}",
+            "Request a real-world example of {skill}",
+            "Ask the candidate to compare {skill} with an alternative",
+        ],
+    },
+    "rephrase": {
+        "icon": "💬",
+        "color": "#e67e22",
+        "templates": [
+            "Candidate avoided {concept}, consider rephrasing",
+            "Rephrase the question on {topic} — candidate may need a simpler angle",
+            "Try asking about {concept} from a different perspective",
+            "Give a concrete scenario before asking about {concept}",
+        ],
+    },
+    "star_method": {
+        "icon": "⭐",
+        "color": "#f1c40f",
+        "templates": [
+            "STAR method not used, suggest asking for specific example",
+            "Ask: 'Can you describe a specific situation where this happened?'",
+            "Prompt for the result/outcome of their example",
+            "Guide candidate to structure: Situation → Task → Action → Result",
+        ],
+    },
+    "gap_fill": {
+        "icon": "🎯",
+        "color": "#e74c3c",
+        "templates": [
+            "Gap identified: {topic} not yet covered",
+            "Ask about {topic} — it's a required skill for this role",
+            "{topic} is important for this position, consider a question here",
+            "The candidate hasn't demonstrated {topic} — ask about it",
+        ],
+    },
+    "encourage": {
+        "icon": "👏",
+        "color": "#2ecc71",
+        "templates": [
+            "Candidate is doing well — offer positive reinforcement",
+            "Acknowledge the candidate's strengths before moving on",
+            "Good answer! Briefly praise before next question",
+        ],
+    },
+    "redirect": {
+        "icon": "🔀",
+        "color": "#95a5a6",
+        "templates": [
+            "Consider changing topic — candidate struggling in this area",
+            "Redirect to a stronger topic for the candidate",
+            "Pivot to {topic} to build confidence",
+        ],
+    },
+    "strong_area": {
+        "icon": "💪",
+        "color": "#27ae60",
+        "templates": [
+            "Candidate is strong in {skill}, probe deeper",
+            "Excellent {skill} knowledge — ask advanced follow-up",
+            "The candidate excels at {skill} — test edge cases",
+        ],
+    },
+}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Coaching Resources Database (summary keys — full data in resource_recommender.py)
+# ═══════════════════════════════════════════════════════════════════════
+
+COACHING_RESOURCE_CATEGORIES = {
+    "programming": {
+        "label": "Programming Languages",
+        "topics": ["python", "java", "javascript", "typescript", "c++", "go", "rust"],
+    },
+    "web": {
+        "label": "Web Development",
+        "topics": ["react", "angular", "vue", "django", "flask", "fastapi", "spring", "nextjs"],
+    },
+    "databases": {
+        "label": "Databases",
+        "topics": ["mysql", "postgresql", "mongodb", "redis", "sql"],
+    },
+    "cloud": {
+        "label": "Cloud & DevOps",
+        "topics": ["aws", "azure", "gcp", "docker", "kubernetes", "terraform", "git"],
+    },
+    "ml_ai": {
+        "label": "Machine Learning & AI",
+        "topics": ["machine learning", "deep learning", "tensorflow", "pytorch", "nlp", "scikit-learn"],
+    },
+    "algorithms": {
+        "label": "Algorithms & System Design",
+        "topics": ["data structures", "algorithms", "system design"],
+    },
+    "soft_skills": {
+        "label": "Soft Skills",
+        "topics": ["leadership", "communication", "problem solving"],
+    },
+    "practice_platforms": {
+        "label": "Practice Platforms",
+        "topics": ["general"],
+        "platforms": [
+            {"name": "LeetCode", "url": "https://leetcode.com/", "type": "algorithms"},
+            {"name": "HackerRank", "url": "https://www.hackerrank.com/", "type": "general"},
+            {"name": "Pramp", "url": "https://www.pramp.com/", "type": "mock_interviews"},
+            {"name": "Interviewing.io", "url": "https://interviewing.io/", "type": "mock_interviews"},
+            {"name": "Exercism", "url": "https://exercism.org/", "type": "languages"},
+            {"name": "Codewars", "url": "https://www.codewars.com/", "type": "algorithms"},
+        ],
+    },
+}
+
+COACHING_LEVEL_THRESHOLDS = {
+    "beginner_max": 40,
+    "intermediate_max": 70,
+    "advanced_min": 70,
+}
+
+COACHING_TIME_ESTIMATES = {
+    "beginner_to_intermediate": "2-4 weeks",
+    "intermediate_to_advanced": "4-8 weeks",
+    "advanced_to_expert": "8-12 weeks",
+    "quick_familiarization": "3-5 days",
+}
