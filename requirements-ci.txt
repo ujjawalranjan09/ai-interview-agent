@@ -1,0 +1,59 @@
+# ============================================================
+# CI-optimised requirements
+# ============================================================
+# Heavy production deps (torch, speechbrain, deepface, whisper)
+# are replaced with lightweight stubs or skipped entirely.
+# All tests that need these use unittest.mock to patch them out.
+# ============================================================
+
+# --- Test framework ---
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+
+# --- Lint (installed separately in lint job, listed here for local use) ---
+ruff>=0.3.0
+black>=24.0.0
+
+# --- Core app deps (fast to install) ---
+python-dotenv>=1.0.0
+numpy>=1.24.0
+pandas>=2.1.0
+scipy>=1.11.0
+
+# --- NLP (moderate install time, needed by resume tests) ---
+sentence-transformers>=2.2.0
+spacy>=3.7.0
+
+# --- HuggingFace (needed for NER parser, mocked in most tests) ---
+transformers>=4.38.0
+
+# --- Audio processing (librosa only, no torch-based models in CI) ---
+librosa>=0.10.0
+soundfile>=0.12.0
+
+# --- Vector store ---
+chromadb>=0.4.0
+
+# --- PDF ---
+fpdf2>=2.7.6
+pdfplumber>=0.10.0
+PyPDF2>=3.0.0
+
+# --- Charts / reporting ---
+plotly>=5.18.0
+networkx>=3.2.0
+
+# --- Utilities ---
+python-multipart>=0.0.6
+
+# --- Heavy deps skipped in CI (mocked in tests) ---
+# torch            -> mocked via unittest.mock
+# torchaudio       -> mocked
+# speechbrain      -> mocked
+# openai-whisper   -> mocked
+# deepface         -> mocked
+# opencv-python    -> mocked
+# pymongo          -> mocked  (MONGODB_URI env var set to fake)
+# pyttsx3          -> mocked  (requires audio device)
+# gTTS             -> mocked

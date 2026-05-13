@@ -1,0 +1,48 @@
+# ============================================================
+# Docker image build + security scan on master merges
+# ============================================================
+# Separate from ci.yml so it can be triggered independently
+# and expanded later with registry push.
+
+name: Docker
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'requirements.txt'
+      - '.github/workflows/docker-build.yml'
+
+jobs:
+  build-and-scan:
+    name: Build & Trivy scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ai-interview-agent:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ai-interview-agent:latest
+          format: table
+          exit-code: '0'          # warn only, don't fail build
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
