@@ -18,16 +18,22 @@ class RAGChain:
     skills to job requirements.
 
     Args:
-        retriever: An initialized Retriever with indexed job description.
-        model: OpenAI model name (default from config).
+        retriever:    An initialized Retriever with indexed job description.
+        model:        OpenAI model name (default from config).
+        ner_profile:  Optional structured NER result from ``parse_resume_with_ner()``.
+                      When provided, the chain enriches the prompt with
+                      organisations, designations, and education context so that
+                      generated questions are more targeted.
     """
 
     def __init__(
         self,
         retriever: Retriever,
         model: Optional[str] = None,
+        ner_profile: Optional[Dict[str, Any]] = None,
     ):
         self.retriever = retriever
+        self.ner_profile = ner_profile or {}
         if model is None:
             try:
                 from app.config import OPENAI_MODEL
@@ -38,8 +44,33 @@ class RAGChain:
 
     @property
     def has_llm(self) -> bool:
-        """Whether OpenAI API is available."""
         return bool(self._openai_key)
+
+    # ── Public helpers for NER enrichment ────────────────────────────────────
+
+    def load_ner_profile(self, ner_profile: Dict[str, Any]) -> None:
+        """Attach a NER profile produced by ``parse_resume_with_ner()``.
+
+        Can be called after construction — e.g. once the PDF upload completes.
+        """
+        self.ner_profile = ner_profile
+
+    def _ner_context(self) -> str:
+        """Build a compact NER context string to inject into prompts."""
+        if not self.ner_profile:
+            return ""
+        parts = []
+        if self.ner_profile.get("name"):
+            parts.append(f"Candidate name: {self.ner_profile['name']}")
+        if self.ner_profile.get("organizations"):
+            parts.append(f"Companies/Orgs on resume: {', '.join(self.ner_profile['organizations'][:5])}")
+        if self.ner_profile.get("education"):
+            parts.append(f"Education entities: {', '.join(self.ner_profile['education'][:3])}")
+        if self.ner_profile.get("designation"):
+            parts.append(f"Roles/Designations: {', '.join(self.ner_profile['designation'][:3])}")
+        return "\n".join(parts)
+
+    # ── Core methods (unchanged public API) ───────────────────────────────────
 
     def generate_questions(
         self,
@@ -49,33 +80,13 @@ class RAGChain:
         num_questions: int = 5,
         difficulty: str = "medium",
     ) -> List[Dict[str, Any]]:
-        """Generate targeted interview questions.
-
-        Retrieves relevant job requirements for candidate skills, then
-        generates questions using LLM or template fallback.
-
-        Args:
-            candidate_skills: Skills listed on the resume.
-            candidate_projects: Project names from the resume.
-            candidate_experience: Summary of experience.
-            num_questions: Number of questions to generate.
-            difficulty: "easy", "medium", "hard", or "expert".
-
-        Returns:
-            List of question dicts with keys: question, type, target_skill,
-            job_requirement, rationale.
-        """
-        # Retrieve relevant job requirements
         requirements = self.retriever.retrieve_requirements(
             candidate_skills, top_k=max(5, num_questions)
         )
-
-        # Format context for the prompt
         req_text = "\n".join(
             f"- {chunk.text} (relevance: {score:.2f}, skill: {skill})"
             for chunk, score, skill in requirements
         )
-
         if not req_text:
             req_text = "(No specific requirements matched from job description)"
 
@@ -88,57 +99,38 @@ class RAGChain:
                 num_questions=num_questions,
                 difficulty=difficulty,
             )
-        else:
-            return self._generate_from_templates(
-                candidate_skills=candidate_skills,
-                candidate_projects=candidate_projects,
-                requirements=requirements,
-                num_questions=num_questions,
-                difficulty=difficulty,
-            )
+        return self._generate_from_templates(
+            candidate_skills=candidate_skills,
+            candidate_projects=candidate_projects,
+            requirements=requirements,
+            num_questions=num_questions,
+            difficulty=difficulty,
+        )
 
     def identify_gaps(
         self,
         candidate_skills: List[str],
     ) -> List[Dict[str, Any]]:
-        """Identify gaps between candidate skills and job requirements.
-
-        Args:
-            candidate_skills: Skills from the candidate's resume.
-
-        Returns:
-            List of gap dicts with required_skill, description, severity.
-        """
-        # Search for "required" and "must have" clauses in the JD
         all_text = self.retriever.get_all_text()
         gaps: List[Dict[str, Any]] = []
-
-        # Extract requirement sentences
         import re
         req_sentences = re.split(r"[.\n]", all_text)
         candidate_skills_lower = {s.lower() for s in candidate_skills}
-
         requirement_keywords = ["required", "must have", "essential", "necessary", "minimum"]
         nice_to_have_keywords = ["preferred", "nice to have", "bonus", "plus", "desirable"]
-
         for sentence in req_sentences:
             sentence_lower = sentence.lower().strip()
             if not sentence_lower or len(sentence_lower) < 10:
                 continue
-
-            # Check if this sentence describes a requirement
             is_required = any(kw in sentence_lower for kw in requirement_keywords)
             is_nice = any(kw in sentence_lower for kw in nice_to_have_keywords)
-
             if not (is_required or is_nice):
                 continue
-
-            # Check if the candidate has matching skills
-            from app.constants import ALL_SKILLS
-            mentioned_skills = [
-                s for s in ALL_SKILLS if s in sentence_lower
-            ]
-
+            try:
+                from app.constants import ALL_SKILLS
+            except ImportError:
+                ALL_SKILLS = []
+            mentioned_skills = [s for s in ALL_SKILLS if s in sentence_lower]
             for skill in mentioned_skills:
                 if skill not in candidate_skills_lower:
                     severity = "high" if is_required else "medium"
@@ -148,15 +140,12 @@ class RAGChain:
                         "severity": severity,
                         "suggestion": f"Your resume doesn't mention {skill}, which is {'required' if is_required else 'preferred'} for this role.",
                     })
-
-        # Deduplicate by skill name
         seen = set()
         unique_gaps = []
         for gap in gaps:
             if gap["required_skill"] not in seen:
                 seen.add(gap["required_skill"])
                 unique_gaps.append(gap)
-
         return unique_gaps
 
     def generate_gap_questions(
@@ -164,21 +153,10 @@ class RAGChain:
         gaps: List[Dict[str, Any]],
         max_questions: int = 3,
     ) -> List[Dict[str, Any]]:
-        """Generate questions that probe identified skill gaps.
-
-        Args:
-            gaps: Gap dicts from identify_gaps().
-            max_questions: Maximum gap-related questions.
-
-        Returns:
-            List of question dicts.
-        """
         questions: List[Dict[str, Any]] = []
-
         for gap in gaps[:max_questions]:
             skill = gap["required_skill"]
             severity = gap["severity"]
-
             if severity == "high":
                 question_text = (
                     f"This role requires experience with {skill}. "
@@ -190,7 +168,6 @@ class RAGChain:
                     f"The job description mentions {skill} as a preferred skill. "
                     f"How familiar are you with {skill}?"
                 )
-
             questions.append({
                 "question": question_text,
                 "type": "gap_probe",
@@ -199,10 +176,9 @@ class RAGChain:
                 "rationale": gap.get("suggestion", ""),
                 "severity": severity,
             })
-
         return questions
 
-    # ── LLM generation ────────────────────────────────────────────────
+    # ── LLM generation ────────────────────────────────────────────────────────
 
     def _generate_with_llm(
         self,
@@ -213,14 +189,15 @@ class RAGChain:
         num_questions: int,
         difficulty: str,
     ) -> List[Dict[str, Any]]:
-        """Generate questions using OpenAI API."""
+        ner_ctx = self._ner_context()
         prompt = (
             "You are an expert technical interviewer. Generate interview questions that match "
             "the candidate's background to the job requirements.\n\n"
             f"Candidate Skills: {', '.join(candidate_skills)}\n"
             f"Candidate Projects: {', '.join(candidate_projects)}\n"
-            f"Experience: {candidate_experience}\n\n"
-            f"Relevant Job Requirements:\n{requirements_text}\n\n"
+            f"Experience: {candidate_experience}\n"
+            + (f"\nAdditional Resume Context (from NER):\n{ner_ctx}\n" if ner_ctx else "")
+            + f"\nRelevant Job Requirements:\n{requirements_text}\n\n"
             f"Difficulty: {difficulty}\n"
             f"Number of questions: {num_questions}\n\n"
             "For each question, provide:\n"
@@ -233,7 +210,6 @@ class RAGChain:
             '[{"question": "...", "type": "...", "target_skill": "...", '
             '"job_requirement": "...", "rationale": "..."}]'
         )
-
         try:
             import openai
             client = openai.OpenAI(api_key=self._openai_key)
@@ -247,16 +223,12 @@ class RAGChain:
                 max_tokens=2000,
             )
             content = response.choices[0].message.content.strip()
-
-            # Parse JSON from the response
             questions = self._parse_json_response(content)
             return questions[:num_questions]
-
         except Exception as exc:
-            logger.error(f"LLM generation failed: {exc}, falling back to templates")
+            logger.error("LLM generation failed: %s, falling back to templates", exc)
             return self._generate_from_templates(
-                candidate_skills, candidate_projects,
-                [], num_questions, difficulty,
+                candidate_skills, candidate_projects, [], num_questions, difficulty,
             )
 
     def _generate_from_templates(
@@ -267,7 +239,6 @@ class RAGChain:
         num_questions: int,
         difficulty: str,
     ) -> List[Dict[str, Any]]:
-        """Generate questions from templates (no LLM)."""
         try:
             from app.constants import TECHNICAL_QUESTION_TEMPLATES, RESUME_QUESTION_TEMPLATES
         except ImportError:
@@ -281,26 +252,19 @@ class RAGChain:
                 "Tell me about your project '{project}'.",
                 "How did you use {skill} in your work?",
             ]
-
-        templates = TECHNICAL_QUESTION_TEMPLATES.get(
-            difficulty, TECHNICAL_QUESTION_TEMPLATES["medium"]
-        )
-
+        templates = TECHNICAL_QUESTION_TEMPLATES.get(difficulty, TECHNICAL_QUESTION_TEMPLATES["medium"])
         questions: List[Dict[str, Any]] = []
         skill_idx = 0
         template_idx = 0
-
         while len(questions) < num_questions and candidate_skills:
             skill = candidate_skills[skill_idx % len(candidate_skills)]
             template = templates[template_idx % len(templates)]
-
             question_text = template.format(
                 skill=skill,
                 other_skill=candidate_skills[(skill_idx + 1) % len(candidate_skills)]
                 if len(candidate_skills) > 1
                 else "a related technology",
             )
-
             questions.append({
                 "question": question_text,
                 "type": "technical",
@@ -308,11 +272,8 @@ class RAGChain:
                 "job_requirement": "",
                 "rationale": f"Testing {skill} knowledge at {difficulty} level.",
             })
-
             skill_idx += 1
             template_idx += 1
-
-        # Add resume-based questions
         if candidate_projects:
             for i, project in enumerate(candidate_projects[:2]):
                 if len(questions) >= num_questions:
@@ -320,30 +281,22 @@ class RAGChain:
                 template = RESUME_QUESTION_TEMPLATES[i % len(RESUME_QUESTION_TEMPLATES)]
                 skill = candidate_skills[0] if candidate_skills else "your expertise"
                 other = candidate_skills[1] if len(candidate_skills) > 1 else "related tools"
-
                 questions.append({
-                    "question": template.format(
-                        project=project, skill=skill, other_skill=other
-                    ),
+                    "question": template.format(project=project, skill=skill, other_skill=other),
                     "type": "resume",
                     "target_skill": skill,
                     "job_requirement": "",
                     "rationale": f"Probing experience in project '{project}'.",
                 })
-
         return questions[:num_questions]
 
     @staticmethod
     def _parse_json_response(content: str) -> List[Dict[str, Any]]:
-        """Parse JSON from LLM response, handling markdown code blocks."""
-        # Strip markdown code blocks
         content = content.strip()
         if content.startswith("```"):
             lines = content.split("\n")
-            # Remove first and last lines (```json ... ```)
             lines = [l for l in lines if not l.strip().startswith("```")]
             content = "\n".join(lines)
-
         try:
             parsed = json.loads(content)
             if isinstance(parsed, list):
@@ -352,5 +305,5 @@ class RAGChain:
                 return parsed["questions"]
             return []
         except json.JSONDecodeError:
-            logger.warning(f"Could not parse LLM JSON response")
+            logger.warning("Could not parse LLM JSON response")
             return []

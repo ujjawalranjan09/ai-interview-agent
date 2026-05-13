@@ -1,17 +1,15 @@
-"""Skill extraction using spaCy NER and custom skill taxonomy."""
+"""Skill extraction using spaCy NER, custom skill taxonomy, and optional HF NER enrichment."""
 
 import logging
 import re
-from typing import List, Set, Dict, Any, Optional
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
-# Lazy-loaded spaCy model
 _nlp = None
 
 
 def _get_nlp():
-    """Lazily load spaCy model."""
     global _nlp
     if _nlp is None:
         try:
@@ -20,7 +18,7 @@ def _get_nlp():
             try:
                 _nlp = spacy.load(SPACY_MODEL)
             except OSError:
-                logger.warning(f"spaCy model {SPACY_MODEL} not found, downloading...")
+                logger.warning("spaCy model %s not found, downloading...", SPACY_MODEL)
                 from spacy.cli import download
                 download(SPACY_MODEL)
                 _nlp = spacy.load(SPACY_MODEL)
@@ -30,28 +28,30 @@ def _get_nlp():
     return _nlp if _nlp else None
 
 
-def extract_skills(text: str) -> List[str]:
-    """Extract skills from resume text using spaCy NER and taxonomy matching.
-    
+def extract_skills(text: str, use_ner: bool = False) -> List[str]:
+    """Extract skills from resume text.
+
     Args:
-        text: Resume text (or skills section text).
-        
+        text:    Resume text (or skills section text).
+        use_ner: When True, also calls the HuggingFace ``yashpwr/resume-ner-bert``
+                 model to surface skills that the taxonomy may miss.
+                 Requires ``transformers`` and ``torch``.
+
     Returns:
-        List of unique extracted skills.
+        Sorted list of unique extracted skills.
     """
-    from app.constants import SKILL_TAXONOMY, ALL_SKILLS
+    from app.constants import ALL_SKILLS
 
     skills_found: Set[str] = set()
     text_lower = text.lower()
 
-    # Method 1: Taxonomy-based matching
+    # Method 1: Taxonomy matching
     for skill in ALL_SKILLS:
-        # Use word boundary matching to avoid false positives
         pattern = r'\b' + re.escape(skill.lower()) + r'\b'
         if re.search(pattern, text_lower):
             skills_found.add(skill.lower())
 
-    # Method 2: spaCy NER for technology/product entities
+    # Method 2: spaCy NER
     nlp = _get_nlp()
     if nlp:
         try:
@@ -59,19 +59,17 @@ def extract_skills(text: str) -> List[str]:
             for ent in doc.ents:
                 if ent.label_ in ("ORG", "PRODUCT", "WORK_OF_ART"):
                     ent_lower = ent.text.lower().strip()
-                    # Check if it matches known skills
                     for skill in ALL_SKILLS:
                         if skill.lower() in ent_lower or ent_lower in skill.lower():
                             skills_found.add(skill.lower())
         except Exception as e:
-            logger.warning(f"spaCy NER failed: {e}")
+            logger.warning("spaCy NER failed: %s", e)
 
-    # Method 3: Look for common skill patterns
-    # e.g., "Python 3.x", "React.js", "Node.js", "C++", "C#"
+    # Method 3: Regex patterns for common formats
     skill_patterns = [
-        r'\b[A-Z][a-z]+(?:\.[a-z]+)+\b',  # React.js, Node.js
-        r'\b[A-Z]\+\+\b',  # C++
-        r'\b[A-Z]#\b',  # C#
+        r'\b[A-Z][a-z]+(?:\.[a-z]+)+\b',
+        r'\b[A-Z]\+\+\b',
+        r'\b[A-Z]#\b',
         r'\b(?:AWS|GCP|CI/CD|REST|API|SQL|NoSQL|HTML|CSS|JSON|XML|YAML|SSH|TCP|UDP)\b',
     ]
     for pattern in skill_patterns:
@@ -79,26 +77,32 @@ def extract_skills(text: str) -> List[str]:
         for match in matches:
             skills_found.add(match.lower())
 
-    # Categorize skills
+    # Method 4: HuggingFace NER enrichment (opt-in)
+    if use_ner:
+        try:
+            from modules.resume.ner_parser import _get_ner_pipeline
+            pipeline = _get_ner_pipeline()
+            ner_results = pipeline(text[:12000])
+            for item in ner_results:
+                label = str(item.get("entity_group", "")).upper()
+                value = str(item.get("word", "")).strip()
+                if label in {"SKILL", "TECHNOLOGY"} and value and len(value) > 1:
+                    skills_found.add(value.lower())
+        except Exception as exc:
+            logger.warning("HuggingFace NER enrichment skipped: %s", exc)
+
     categorized = categorize_skills(list(skills_found))
-    logger.info(f"Extracted {len(skills_found)} skills across {len(categorized)} categories")
+    logger.info(
+        "Extracted %d skills across %d categories (ner=%s)",
+        len(skills_found), len(categorized), use_ner,
+    )
     return sorted(skills_found)
 
 
 def categorize_skills(skills: List[str]) -> Dict[str, List[str]]:
-    """Categorize extracted skills into technology categories.
-    
-    Args:
-        skills: List of skill strings.
-        
-    Returns:
-        Dictionary mapping category names to lists of skills.
-    """
     from app.constants import SKILL_TAXONOMY
-
     categorized: Dict[str, List[str]] = {cat: [] for cat in SKILL_TAXONOMY}
     categorized["other"] = []
-
     for skill in skills:
         skill_lower = skill.lower()
         found = False
@@ -109,76 +113,85 @@ def categorize_skills(skills: List[str]) -> Dict[str, List[str]]:
                 break
         if not found:
             categorized["other"].append(skill)
-
-    # Remove empty categories
     return {k: v for k, v in categorized.items() if v}
 
 
 def extract_projects(text: str) -> List[str]:
-    """Extract project names from resume text.
-    
-    Args:
-        text: Resume text (or projects section text).
-        
-    Returns:
-        List of project names/titles.
-    """
     projects: List[str] = []
     lines = text.split("\n")
-
     for line in lines:
         stripped = line.strip()
         if not stripped:
             continue
-        # Project entries often start with bullet points, dashes, or bold markers
-        # Also look for lines that look like project titles
-        cleaned = re.sub(r'^[\-•*▪►▸▹●○◆◇■□★☆→➜❯]+\s*', '', stripped)
-        cleaned = cleaned.strip()
-
-        # Skip very short or very long lines (likely not project names)
+        cleaned = re.sub(r'^[\-•*▪►▸▹●○◆◇■□★☆→➜❯]+\s*', '', stripped).strip()
         if 3 < len(cleaned) < 200:
-            # Skip lines that look like dates or durations
             if re.match(r'^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2})', cleaned, re.IGNORECASE):
                 continue
-            # Skip lines that are just technology lists
             if re.match(r'^(?:Technologies|Tech Stack|Tools|Skills used):', cleaned, re.IGNORECASE):
                 continue
             projects.append(cleaned)
-
-    return projects[:20]  # Limit to reasonable number
+    return projects[:20]
 
 
 def extract_candidate_info(text: str) -> Dict[str, Any]:
-    """Extract candidate information (name, email) from resume text.
-    
-    Args:
-        text: Raw resume text.
-        
-    Returns:
-        Dictionary with candidate info fields.
-    """
     info: Dict[str, Any] = {}
-
-    # Extract email
     email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
     emails = re.findall(email_pattern, text)
     if emails:
         info["email"] = emails[0]
-
-    # Extract name (first line heuristic - often the name is on line 1)
     lines = [l.strip() for l in text.split("\n") if l.strip()]
     if lines:
-        # The first non-empty line is often the name
         first_line = lines[0]
-        # Skip if it looks like an email, phone, or URL
-        if not re.search(email_pattern, first_line) and not re.search(r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}', first_line):
-            if not first_line.startswith("http") and len(first_line) < 60:
-                info["name"] = first_line
-
-    # Extract phone number
+        if (not re.search(email_pattern, first_line)
+                and not re.search(r'\d{3}[-.\s]?\d{3}[-.\s]?\d{4}', first_line)
+                and not first_line.startswith("http")
+                and len(first_line) < 60):
+            info["name"] = first_line
     phone_pattern = r'[\+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]{7,15}'
     phones = re.findall(phone_pattern, text)
     if phones:
         info["phone"] = phones[0]
-
     return info
+
+
+def build_full_profile(
+    pdf_path: str,
+    use_ner: bool = True,
+) -> Dict[str, Any]:
+    """Convenience function: parse a resume PDF and return a complete enriched profile.
+
+    Combines section segmentation, contact extraction, skill extraction,
+    and optional HuggingFace NER entity detection into one call.
+
+    Args:
+        pdf_path: Path to the resume PDF.
+        use_ner:  When True, uses ``yashpwr/resume-ner-bert`` for entity enrichment.
+
+    Returns:
+        A unified profile dict ready to pass into ``RAGChain.load_ner_profile()``.
+    """
+    if use_ner:
+        from modules.resume.ner_parser import parse_resume_with_ner
+        profile = parse_resume_with_ner(pdf_path)
+        # Merge skill extractor results on top of NER skills
+        extra_skills = extract_skills(profile["raw_text"], use_ner=False)
+        combined = sorted(set(profile.get("skills", []) + extra_skills))
+        profile["skills"] = combined
+        return profile
+    else:
+        from modules.resume.parser import extract_sections
+        from modules.resume.skill_extractor import extract_candidate_info
+        sections = extract_sections(pdf_path)
+        raw_text = "\n\n".join(sections.values())
+        skills = extract_skills(raw_text, use_ner=False)
+        info = extract_candidate_info(raw_text)
+        return {
+            "raw_text": raw_text,
+            "sections": sections,
+            "skills": skills,
+            "organizations": [],
+            "education": [],
+            "designation": [],
+            "entities": [],
+            **info,
+        }
