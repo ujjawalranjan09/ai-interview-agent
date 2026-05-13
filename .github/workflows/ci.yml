@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install core test dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest pytest-cov pytest-mock
+          pip install sentence-transformers numpy python-dotenv pymongo
+          pip install transformers chromadb
+
+      - name: Run tests
+        env:
+          MONGO_URI: mongodb://localhost:27017
+          MONGO_DB_NAME: test_interview_agent
+          OPENAI_API_KEY: ""
+        run: |
+          pytest tests/ \
+            --cov=modules \
+            --cov=database \
+            --cov=app \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            -v \
+            --tb=short \
+            --ignore=tests/test_video.py
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false

@@ -1,4 +1,8 @@
-"""Document retriever for job descriptions — chunking, embedding, and similarity search."""
+"""Document retriever for job descriptions — chunking, embedding, and similarity search.
+
+Embeddings are stored in-memory during a session. To persist across restarts
+integrate with ChromaDB by passing a collection to load_document().
+"""
 
 import logging
 import os
@@ -10,40 +14,37 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Lazy-loaded sentence transformer
+# Lazy-loaded sentence transformer (cached at module level across all Retriever instances)
 _model = None
 
 
 def _get_model():
-    """Lazily load the sentence-transformers model."""
+    """Lazily load and cache the sentence-transformers model."""
     global _model
     if _model is None:
         try:
             from sentence_transformers import SentenceTransformer
             from app.config import SENTENCE_TRANSFORMER_MODEL
             _model = SentenceTransformer(SENTENCE_TRANSFORMER_MODEL)
-            logger.info(f"Loaded embedding model: {SENTENCE_TRANSFORMER_MODEL}")
-        except ImportError:
+            logger.info("Loaded embedding model: %s", SENTENCE_TRANSFORMER_MODEL)
+        except ImportError as exc:
             raise ImportError(
                 "sentence-transformers is required. Install with: pip install sentence-transformers"
-            )
+            ) from exc
     return _model
 
 
 @dataclass
 class DocumentChunk:
     """A chunk of a document with its embedding."""
+
     text: str
     chunk_id: int
     metadata: Dict[str, Any] = field(default_factory=dict)
     embedding: Optional[np.ndarray] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "text": self.text,
-            "chunk_id": self.chunk_id,
-            "metadata": self.metadata,
-        }
+        return {"text": self.text, "chunk_id": self.chunk_id, "metadata": self.metadata}
 
 
 class Retriever:
@@ -53,19 +54,17 @@ class Retriever:
     chunks for a given query using cosine similarity.
 
     Args:
-        chunk_size: Maximum characters per chunk.
-        chunk_overlap: Overlap between consecutive chunks.
+        chunk_size:    Maximum characters per chunk.
+        chunk_overlap: Overlap between consecutive chunks (characters).
     """
 
-    def __init__(
-        self,
-        chunk_size: int = 512,
-        chunk_overlap: int = 64,
-    ):
+    def __init__(self, chunk_size: int = 512, chunk_overlap: int = 64):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self._chunks: List[DocumentChunk] = []
         self._embeddings_matrix: Optional[np.ndarray] = None
+
+    # ── Properties ────────────────────────────────────────────────────────────
 
     @property
     def chunk_count(self) -> int:
@@ -74,8 +73,10 @@ class Retriever:
 
     @property
     def is_ready(self) -> bool:
-        """Whether the retriever has indexed documents."""
+        """Whether the retriever has indexed documents and is ready to query."""
         return self._embeddings_matrix is not None and len(self._chunks) > 0
+
+    # ── Public API ────────────────────────────────────────────────────────────
 
     def load_document(
         self,
@@ -86,8 +87,8 @@ class Retriever:
         """Load and index a document from raw text.
 
         Args:
-            text: The document text.
-            source: Label for the document source.
+            text:     The document text.
+            source:   Label for the document source.
             metadata: Optional metadata to attach to each chunk.
 
         Returns:
@@ -96,39 +97,32 @@ class Retriever:
         if not text or not text.strip():
             raise ValueError("Document text cannot be empty")
 
-        base_metadata = metadata or {}
-        base_metadata["source"] = source
-
-        # Clean and split into chunks
+        base_metadata = {**(metadata or {}), "source": source}
         cleaned = self._clean_text(text)
         raw_chunks = self._split_into_chunks(cleaned)
 
-        model = _get_model()
+        if not raw_chunks:
+            logger.warning("No chunks produced for source '%s'", source)
+            return 0
 
-        # Create document chunks with embeddings
+        model = _get_model()
+        encoded = model.encode(raw_chunks, show_progress_bar=False, normalize_embeddings=True)
+
         chunks: List[DocumentChunk] = []
         embeddings_list: List[np.ndarray] = []
-
-        # Encode all at once for efficiency
-        if raw_chunks:
-            encoded = model.encode(raw_chunks, show_progress_bar=False, normalize_embeddings=True)
-            for i, (chunk_text, emb) in enumerate(zip(raw_chunks, encoded)):
-                chunk = DocumentChunk(
-                    text=chunk_text,
-                    chunk_id=i,
-                    metadata={**base_metadata, "chunk_index": i},
-                    embedding=emb,
-                )
-                chunks.append(chunk)
-                embeddings_list.append(emb)
+        for i, (chunk_text, emb) in enumerate(zip(raw_chunks, encoded)):
+            chunk = DocumentChunk(
+                text=chunk_text,
+                chunk_id=i,
+                metadata={**base_metadata, "chunk_index": i},
+                embedding=emb,
+            )
+            chunks.append(chunk)
+            embeddings_list.append(emb)
 
         self._chunks = chunks
-        if embeddings_list:
-            self._embeddings_matrix = np.array(embeddings_list)
-        else:
-            self._embeddings_matrix = None
-
-        logger.info(f"Indexed {len(chunks)} chunks from '{source}'")
+        self._embeddings_matrix = np.array(embeddings_list)
+        logger.info("Indexed %d chunks from '%s'", len(chunks), source)
         return len(chunks)
 
     def load_from_file(
@@ -136,13 +130,11 @@ class Retriever:
         file_path: str,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> int:
-        """Load a document from a file.
-
-        Supports .txt, .md, and .pdf files.
+        """Load a document from a .txt, .md, or .pdf file.
 
         Args:
             file_path: Path to the document.
-            metadata: Optional metadata.
+            metadata:  Optional metadata.
 
         Returns:
             Number of chunks created.
@@ -151,15 +143,8 @@ class Retriever:
             raise FileNotFoundError(f"Document not found: {file_path}")
 
         ext = os.path.splitext(file_path)[1].lower()
-
-        if ext == ".pdf":
-            text = self._read_pdf(file_path)
-        else:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                text = f.read()
-
-        source = os.path.basename(file_path)
-        return self.load_document(text, source=source, metadata=metadata)
+        text = self._read_pdf(file_path) if ext == ".pdf" else self._read_text(file_path)
+        return self.load_document(text, source=os.path.basename(file_path), metadata=metadata)
 
     def retrieve(
         self,
@@ -170,12 +155,12 @@ class Retriever:
         """Retrieve the most relevant chunks for a query.
 
         Args:
-            query: The search query.
-            top_k: Number of results to return.
+            query:          The search query.
+            top_k:          Number of results to return.
             min_similarity: Minimum cosine similarity threshold.
 
         Returns:
-            List of (DocumentChunk, similarity_score) tuples sorted by relevance.
+            List of (DocumentChunk, similarity_score) sorted by relevance (descending).
         """
         if not self.is_ready:
             logger.warning("Retriever has no indexed documents")
@@ -184,10 +169,8 @@ class Retriever:
         model = _get_model()
         query_embedding = model.encode([query], normalize_embeddings=True)[0]
 
-        # Cosine similarity (embeddings are already normalized)
+        # Cosine similarity (embeddings are L2-normalised)
         similarities = self._embeddings_matrix @ query_embedding
-
-        # Get top-k indices
         top_indices = np.argsort(similarities)[::-1][:top_k]
 
         results: List[Tuple[DocumentChunk, float]] = []
@@ -195,7 +178,6 @@ class Retriever:
             score = float(similarities[idx])
             if score >= min_similarity:
                 results.append((self._chunks[idx], score))
-
         return results
 
     def retrieve_requirements(
@@ -203,43 +185,45 @@ class Retriever:
         candidate_skills: List[str],
         top_k: int = 5,
     ) -> List[Tuple[DocumentChunk, float, str]]:
-        """Retrieve job requirements relevant to candidate skills.
+        """Retrieve job requirements relevant to a candidate's skill list.
 
         Args:
-            candidate_skills: List of skills from the candidate's resume.
-            top_k: Max results per skill.
+            candidate_skills: Skills extracted from the candidate's resume.
+            top_k:            Max total results.
 
         Returns:
-            List of (DocumentChunk, score, matched_skill) tuples.
+            List of (DocumentChunk, score, matched_skill) sorted by score.
         """
+        if not candidate_skills:
+            return []
+
+        per_skill = max(2, top_k // len(candidate_skills))
         all_results: List[Tuple[DocumentChunk, float, str]] = []
+        seen_ids: set = set()
 
         for skill in candidate_skills:
             query = f"job requirement experience {skill}"
-            results = self.retrieve(query, top_k=max(2, top_k // len(candidate_skills)))
-            for chunk, score in results:
-                # Avoid duplicates
-                if not any(c.chunk_id == chunk.chunk_id for c, _, _ in all_results):
+            for chunk, score in self.retrieve(query, top_k=per_skill):
+                if chunk.chunk_id not in seen_ids:
+                    seen_ids.add(chunk.chunk_id)
                     all_results.append((chunk, score, skill))
 
-        # Sort by score descending and trim
         all_results.sort(key=lambda x: x[1], reverse=True)
         return all_results[:top_k]
 
     def get_all_text(self) -> str:
-        """Get the full text of all indexed chunks."""
+        """Return the full concatenated text of all indexed chunks."""
         return "\n\n".join(chunk.text for chunk in self._chunks)
 
     def clear(self) -> None:
-        """Clear all indexed documents."""
+        """Clear all indexed documents and embeddings."""
         self._chunks = []
         self._embeddings_matrix = None
 
-    # ── Internal methods ──────────────────────────────────────────────
+    # ── Internal helpers ──────────────────────────────────────────────────────
 
     def _clean_text(self, text: str) -> str:
-        """Clean and normalize document text."""
-        # Collapse whitespace
+        """Normalise whitespace in document text."""
         text = re.sub(r"\n{3,}", "\n\n", text)
         text = re.sub(r" {2,}", " ", text)
         return text.strip()
@@ -259,7 +243,6 @@ class Retriever:
             else:
                 if current:
                     chunks.append(current)
-                # If a single sentence exceeds chunk_size, split it
                 if len(sentence) > self.chunk_size:
                     for i in range(0, len(sentence), self.chunk_size - self.chunk_overlap):
                         chunks.append(sentence[i : i + self.chunk_size])
@@ -270,7 +253,7 @@ class Retriever:
         if current:
             chunks.append(current)
 
-        # Add overlap: prepend tail of previous chunk
+        # Add overlap: prepend tail of the previous chunk
         if self.chunk_overlap > 0 and len(chunks) > 1:
             overlapped = [chunks[0]]
             for i in range(1, len(chunks)):
@@ -281,24 +264,33 @@ class Retriever:
         return chunks
 
     @staticmethod
+    def _read_text(file_path: str) -> str:
+        """Read a plain-text or markdown file."""
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read()
+
+    @staticmethod
     def _read_pdf(file_path: str) -> str:
-        """Extract text from a PDF file."""
+        """Extract text from a PDF file (pdfplumber preferred, PyPDF2 fallback)."""
         try:
             import pdfplumber
 
-            text_parts: List[str] = []
+            parts: List[str] = []
             with pdfplumber.open(file_path) as pdf:
                 for page in pdf.pages:
                     page_text = page.extract_text()
                     if page_text:
-                        text_parts.append(page_text)
-            return "\n\n".join(text_parts)
+                        parts.append(page_text)
+            return "\n\n".join(parts)
         except ImportError:
             pass
 
         try:
             from PyPDF2 import PdfReader
+
             reader = PdfReader(file_path)
             return "\n\n".join(page.extract_text() or "" for page in reader.pages)
-        except ImportError:
-            raise ImportError("Install pdfplumber or PyPDF2 to read PDF files")
+        except ImportError as exc:
+            raise ImportError(
+                "Install pdfplumber or PyPDF2 to read PDF files"
+            ) from exc

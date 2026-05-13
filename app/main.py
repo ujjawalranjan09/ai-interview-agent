@@ -3,6 +3,7 @@
 import logging
 import sys
 import os
+from importlib.metadata import version, PackageNotFoundError
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,6 +16,22 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def _get_app_version() -> str:
+    """Read app version from package metadata or fallback to VERSION file."""
+    try:
+        return version("ai-interview-agent")
+    except PackageNotFoundError:
+        pass
+    version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "VERSION")
+    if os.path.exists(version_file):
+        with open(version_file) as f:
+            return f.read().strip()
+    return "1.0.0"
+
+
+APP_VERSION = _get_app_version()
 
 
 def setup_page_config():
@@ -46,20 +63,11 @@ def init_session_state():
             st.session_state[key] = default
 
 
-def ensure_directories():
-    """Ensure output directories exist."""
-    from app.config import OUTPUTS_DIR, REPORTS_DIR, RECORDINGS_DIR, GRAPHS_DIR
-    for d in [OUTPUTS_DIR, REPORTS_DIR, RECORDINGS_DIR, GRAPHS_DIR]:
-        d.mkdir(parents=True, exist_ok=True)
-
-
 def sidebar_navigation():
     """Render sidebar navigation."""
     with st.sidebar:
         st.title("🎯 AI Interview Agent")
         st.markdown("---")
-
-        page = st.session_state.get("current_page", "home")
 
         st.markdown("### Navigation")
         if st.button("🏠 Home", use_container_width=True):
@@ -88,17 +96,20 @@ def sidebar_navigation():
         st.markdown(f"Candidate: {candidate}")
 
         st.markdown("---")
-        st.caption("Powered by AI | v1.0.0")
+        st.caption(f"Powered by AI | v{APP_VERSION}")
 
 
 def main():
     """Main application entry point."""
     setup_page_config()
     init_session_state()
+
+    # Ensure output directories — side effects only here, never on config import
+    from app.config import ensure_directories
     ensure_directories()
+
     sidebar_navigation()
 
-    # Route to the correct page
     page = st.session_state.get("current_page", "home")
 
     try:
