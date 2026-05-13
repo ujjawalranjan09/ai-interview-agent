@@ -26,6 +26,13 @@ opencv-python-headless>=4.8.0
 deepface>=0.0.80
 tf-keras>=2.15.0
 
+# HuggingFace Speech Emotion (Week 1 upgrade)
+# Model: speechbrain/emotion-recognition-wav2vec2-IEMOCAP
+# 613K+ downloads | Apache 2.0 | https://hf.co/speechbrain/emotion-recognition-wav2vec2-IEMOCAP
+speechbrain>=1.0.0
+transformers>=4.36.0
+torch>=2.0.0
+
 # Charts
 plotly>=5.18.0
 
