@@ -1,0 +1,8 @@
+# --- Hugging Face speech/LLM upgrades ---
+speechbrain>=1.0.0
+transformers>=4.36.0
+torch>=2.0.0
+
+# --- Vector stores for persistent RAG ---
+chromadb>=0.5.0
+faiss-cpu>=1.8.0
