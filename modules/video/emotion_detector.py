@@ -7,19 +7,20 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 # Lazy-loaded DeepFace
-_deepface_loaded = False
+_deepface_loaded = False # False means not tried, True means success, "FAILED" means failed
 
 
 def _ensure_deepface():
     """Ensure DeepFace is available."""
     global _deepface_loaded
-    if not _deepface_loaded:
+    if _deepface_loaded is False: # Using False as "tried but failed", None as "not tried"
         try:
             import deepface
             _deepface_loaded = True
-        except ImportError:
-            raise ImportError("deepface not installed. Install with: pip install deepface")
-    return _deepface_loaded
+        except (ImportError, Exception) as e:
+            logger.warning(f"DeepFace not available: {e}")
+            _deepface_loaded = "FAILED"
+    return _deepface_loaded == True
 
 
 def detect_emotion(frame: np.ndarray) -> Dict[str, Any]:
@@ -35,7 +36,15 @@ def detect_emotion(frame: np.ndarray) -> Dict[str, Any]:
             - face_detected: Whether a face was found
             - face_region: Bounding box of detected face
     """
-    _ensure_deepface()
+    if not _ensure_deepface():
+        return {
+            "dominant_emotion": "neutral",
+            "emotion_scores": {"neutral": 1.0},
+            "face_detected": False,
+            "face_region": {},
+            "confidence_score": 50.0,
+            "fallback": True
+        }
 
     try:
         from deepface import DeepFace

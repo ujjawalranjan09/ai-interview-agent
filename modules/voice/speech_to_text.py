@@ -22,12 +22,11 @@ def _get_whisper_model():
             logger.info(f"Loading Whisper model: {WHISPER_MODEL}")
             _whisper_model = whisper.load_model(WHISPER_MODEL)
             _whisper_model_name = WHISPER_MODEL
-        except ImportError:
-            raise ImportError("openai-whisper not installed. Install with: pip install openai-whisper")
-        except Exception as e:
-            logger.error(f"Failed to load Whisper model: {e}")
-            raise
-    return _whisper_model
+        except (ImportError, Exception) as e:
+            logger.warning(f"Whisper model loading failed: {e}. STT will be unavailable.")
+            _whisper_model = False  # Signal that model is unavailable
+            _whisper_model_name = WHISPER_MODEL
+    return _whisper_model if _whisper_model else None
 
 
 def transcribe_audio(audio_path: str) -> Dict[str, Any]:
