@@ -1,226 +1,196 @@
 <div align="center">
 
-# 🎯 AI Multimodal Interview Agent
+# AI Interview Agent
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-*A production-grade AI system that conducts adaptive technical interviews with real-time emotion detection, voice analysis, and automated PDF report generation.*
+**Production-grade AI platform for conducting adaptive technical interviews with multimodal analysis.**
 
 </div>
 
 ---
 
-## 🎯 What This Project Does
+## Overview
 
-This is a **full-stack multimodal AI interview platform** that replaces a human interviewer. A candidate uploads their resume, the system parses it, generates adaptive questions, listens to voice answers, analyzes facial emotion in real-time, and produces a detailed PDF performance report at the end.
+AI Interview Agent is a full-stack platform that automates technical interviews using artificial intelligence. It parses resumes, generates adaptive questions, analyzes candidate responses through voice and video, and produces comprehensive performance reports.
 
-> 📊 **Multimodal Confidence Score** = 50% Facial Emotion + 30% Voice Tone + 20% Fluency
+### Key Capabilities
 
----
-
-## ✨ Features
-
-### Core (Phases 1–4)
-- **📄 Resume Parsing** — Extracts skills, projects, and candidate info from PDF resumes
-- **🧠 Adaptive Difficulty** — Questions auto-adjust Easy → Medium → Hard → Expert based on performance
-- **🎤 Voice Input** — OpenAI Whisper speech-to-text for answering questions by voice
-- **📹 Facial Emotion Detection** — Real-time analysis via DeepFace (7 emotion classes)
-- **🎧 Voice Emotion Analysis** — Pitch, speed, and hesitation detection via librosa
-- **📊 7 Visualization Charts** — Bar, line, area, radar, pie, step, and grouped bar charts (Plotly)
-- **📄 PDF Report Generation** — Comprehensive multi-page report with FPDF2
-- **🔄 Interview Replay** — Review past interviews with full emotion timeline
-- **💾 MongoDB Storage** — Persistent storage of all interview sessions, questions, emotions
-
-### Phase 5 — Auth & Multi-tenancy
-- **🔐 JWT Authentication** — Register, login, token refresh, profile management
-- **👥 Role-based Access** — Admin, interviewer, and candidate roles with route protection
-- **🏢 Organization Management** — Multi-tenant organization support
-
-### Phase 6 — Admin & Analytics
-- **📈 Analytics Dashboard** — Aggregate metrics, trends, candidate history
-- **⚙️ Admin Panel** — User management, system health, monitoring
-- **📋 Audit Logging** — Track all user actions with searchable audit trail
-
-### Phase 7 — Collaboration & Realtime
-- **💬 AI Copilot** — Real-time interviewer assistant with WebSocket-powered suggestions
-- **📡 WebSocket Support** — Live interview updates and copilot connections
-- **📤 Export & Reports** — Interview report export, coaching plan generation
-- **🔗 Share & Join** — Token-based interview sharing for candidate access
-
-### Phase 8 — Enterprise Features
-- **🔍 Global Search** — Cross-entity search across candidates, interviews, questions
-- **⚖️ GDPR Compliance** — Consent management, data export, right-to-deletion
-- **📅 Interview Scheduling** — Availability management, calendar integration
-- **📦 Bulk Operations** — CSV import for candidates with status tracking
-- **🎥 Proctoring** — Session monitoring with event logging
-- **🔍 Plagiarism Detection** — Code and text similarity checks
-- **🎨 White-label Branding** — Custom domains and organization theming
-
-### Phase 9 — Integrations & Internationalization
-- **🤖 AI Screening** — Automated candidate resume screening and ranking
-- **🔔 Slack Integration** — Webhook notifications via Block Kit
-- **💬 Microsoft Teams Integration** — Adaptive Card notifications
-- **🔄 ATS Integrations** — Greenhouse and Lever sync
-- **🌐 Internationalization** — 7 language locales with i18n routing
-- **📧 Email Templates** — Renderable HTML email templates with preview
-
-### Phase 10 — Platform Stability
-- **🚀 Push Notifications** — Web Push Protocol for real-time alerts
-- **🔧 Feature Flags** — Toggle features on/off per role
-- **⚡ Performance** — Redis caching, optimized indexes, pagination
-- **📱 PWA Support** — Offline cache, install prompt, service worker
-- **🐛 Error Tracking** — Sentry integration for production error monitoring
-- **🛡️ Security Headers** — CSP, HSTS, X-Frame-Options middleware
+- **Multimodal Analysis** — Combines facial emotion, voice tone, and speech patterns for confidence scoring
+- **Adaptive Questioning** — Dynamically adjusts question difficulty based on candidate performance
+- **Real-time Processing** — WebSocket-powered live interview updates and AI copilot assistance
+- **Enterprise Ready** — Multi-tenant architecture with RBAC, GDPR compliance, and audit logging
 
 ---
 
-## 🛠️ Tech Stack
+## Features
 
-| Component | Technology |
-|-----------|-----------|
-| Backend | Python FastAPI + SQLAlchemy (async) |
-| Frontend | Next.js 16 + React 19 + TailwindCSS 4 |
+### Core Interview Engine
+- Resume parsing with skill extraction and knowledge graph generation
+- Adaptive difficulty system (Easy → Medium → Hard → Expert)
+- Voice input via OpenAI Whisper with real-time transcription
+- Facial emotion detection using DeepFace (7 emotion classes)
+- Voice emotion analysis for pitch, speed, and hesitation patterns
+- Semantic answer scoring with keyword and concept coverage
+
+### Platform Features
+- JWT authentication with role-based access control
+- Organization management for multi-tenancy
+- Analytics dashboard with aggregate metrics and trends
+- AI copilot for real-time interviewer assistance
+- Interview scheduling with calendar integration
+- Global search across all entities
+- GDPR compliance with consent management and data export
+
+### Integrations
+- Slack and Microsoft Teams notifications
+- ATS sync (Greenhouse, Lever)
+- Push notifications via Web Push Protocol
+- Sentry error tracking
+- 7-language internationalization
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3.10+, FastAPI, SQLAlchemy (async) |
+| Frontend | Next.js 16, React 19, TypeScript, TailwindCSS 4 |
 | Database | PostgreSQL (primary), Redis (cache) |
+| AI/ML | OpenAI Whisper, DeepFace, sentence-transformers, spaCy |
+| Real-time | WebSockets (FastAPI + Next.js) |
 | Auth | JWT (access + refresh tokens) |
-| NLP | sentence-transformers, spaCy |
-| Speech Recognition | OpenAI Whisper |
-| Video / Emotion | OpenCV, DeepFace |
-| Audio Analysis | librosa |
-| Charts | Recharts |
-| PDF Generation | FPDF2 |
-| Real-time | WebSockets (FastAPI + frontend) |
-| PWA | next-pwa (service worker + offline) |
-| Monitoring | Sentry |
+| PWA | next-pwa (service worker, offline support) |
+| Monitoring | Sentry, structured logging |
 | I18n | next-intl (7 languages) |
 | Package Manager | pnpm (monorepo) |
-| Containerization | Docker + Docker Compose |
+| Containerization | Docker, Docker Compose |
 
 ---
 
-## 📊 Scoring System
+## Getting Started
 
-### Answer Score (0–100)
-```
-Score = 0.4 × Semantic Similarity + 0.3 × Keyword Match + 0.3 × Concept Coverage
-```
+### Prerequisites
 
-### Confidence Score (0–100)
-```
-Confidence = 0.5 × Facial Emotion + 0.3 × Voice Tone + 0.2 × Fluency
-```
+- Python 3.10+
+- Node.js 18+
+- PostgreSQL 14+
+- Redis 6+
+- pnpm
 
-### Adaptive Difficulty Logic
-- Starts at **Medium** (Level 2)
-- Rolling average of last 3 answers:
-  - ≥85 → Harder | 60–84 → Same | 40–59 → Easier | <40 → Easy
-
----
-
-## 🚀 Quick Start
-
-### Option 1: Local Setup
+### Installation
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/ujjawalranjan09/ai-interview-agent.git
 cd ai-interview-agent
 
-# Run setup script
-chmod +x setup.sh
-./setup.sh
-
-# Activate virtual environment
-source venv/bin/activate
+# Install dependencies
+pnpm install
+pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your database and API credentials
 
-# Ensure MongoDB is running
-mongod --dbpath /path/to/data
+# Run database migrations
+cd apps/api
+alembic upgrade head
+cd ../..
 
-# Launch the app
-streamlit run app/main.py
+# Start development servers
+pnpm dev
 ```
 
-### Option 2: Docker
+### Docker
 
 ```bash
-git clone https://github.com/ujjawalranjan09/ai-interview-agent.git
-cd ai-interview-agent
 docker-compose up --build
-# Access at http://localhost:8501
 ```
 
----
-
-## ⚙️ Configuration
-
-Edit `.env`:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MONGO_URI` | `mongodb://localhost:27017` | MongoDB connection |
-| `OPENAI_API_KEY` | — | OpenAI API key (optional) |
-| `WHISPER_MODEL` | `base` | Model size: tiny/base/small/medium/large |
-| `TTS_ENGINE` | `gtts` | TTS engine: gtts or pyttsx3 |
-| `DEFAULT_QUESTIONS_COUNT` | `10` | Number of interview questions |
+Services:
+- API: http://localhost:8000
+- Web: http://localhost:3000
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
 
 ---
 
-## 🏗️ Architecture
+## Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://localhost:5432/ai_interview` |
+| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
+| `JWT_SECRET` | Secret key for JWT tokens | — |
+| `OPENAI_API_KEY` | OpenAI API key (optional) | — |
+| `WHISPER_MODEL` | Speech recognition model size | `base` |
+
+---
+
+## Project Structure
 
 ```
 ai-interview-agent/
-├── app/                    # Streamlit entry & config
-├── modules/
-│   ├── orchestrator/       # Interview flow control
-│   ├── resume/             # PDF parsing & skill extraction
-│   ├── questions/          # Question generation & difficulty
-│   ├── voice/              # STT, TTS, voice emotion
-│   ├── video/              # Camera & facial emotion
-│   ├── evaluation/         # Answer scoring & confidence
-│   ├── analytics/          # Performance metrics & charts
-│   └── report/             # Feedback, PDF generation, replay
-├── database/               # MongoDB models & queries
-├── frontend/               # Streamlit pages & components
-├── tests/                  # pytest test suite
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-└── .env.example
+├── apps/
+│   ├── api/                    # FastAPI backend
+│   │   ├── app/
+│   │   │   ├── api/v1/        # API endpoints
+│   │   │   ├── core/          # Config, security, database
+│   │   │   ├── ml/            # AI/ML models
+│   │   │   ├── schemas/       # Pydantic models
+│   │   │   └── services/      # Business logic
+│   │   └── tests/             # API tests
+│   └── web/                    # Next.js frontend
+│       ├── app/                # App router pages
+│       ├── components/         # React components
+│       └── hooks/              # Custom hooks
+├── modules/                    # Shared Python modules
+├── infra/                      # Docker and deployment configs
+└── load_tests/                 # Performance testing
 ```
 
 ---
 
-## 🧪 Testing
+## API Documentation
+
+Once running, access the interactive API docs:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+---
+
+## Testing
 
 ```bash
-# Run all tests
-python -m pytest tests/ -v
+# Backend tests
+cd apps/api
+pytest tests/ -v
 
-# With coverage report
-pip install pytest-cov
-python -m pytest tests/ --cov=modules --cov-report=html
+# Frontend tests
+cd apps/web
+pnpm test
 ```
 
 ---
 
-## 🔄 Interview State Machine
+## Contributing
 
-```
-IDLE → RESUME_PROCESSING → READY → INTRODUCTION → ASKING_QUESTION
-→ LISTENING → PROCESSING_ANSWER → [GENERATING_FOLLOWUP → ASKING_FOLLOWUP]
-→ SELECTING_NEXT_QUESTION → CLOSING → GENERATING_REPORT → COMPLETED
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
-## 📄 License
+## License
 
 MIT License — see [LICENSE](LICENSE) for details.
 
@@ -228,8 +198,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Built with ❤️ by [Ujjawal Ranjan](https://github.com/ujjawalranjan09) | RTU, Jaipur**
-
-*Redefining technical interviews with multimodal AI.*
+**Built by [Ujjawal Ranjan](https://github.com/ujjawalranjan09)**
 
 </div>
