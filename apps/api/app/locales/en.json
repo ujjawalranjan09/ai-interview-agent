@@ -1,0 +1,19 @@
+{
+  "email": {
+    "interview_invitation_subject": "Interview Invitation from {company_name}",
+    "interview_reminder_subject": "Reminder: Interview Tomorrow with {company_name}",
+    "interview_completed_subject": "Interview Completed — {candidate_name}",
+    "report_ready_subject": "Your Interview Report is Ready",
+    "coaching_ready_subject": "Your Personalized Coaching Plan is Ready",
+    "welcome_subject": "Welcome to {company_name}",
+    "password_reset_subject": "Password Reset Request"
+  },
+  "errors": {
+    "not_found": "Resource not found",
+    "unauthorized": "Unauthorized access",
+    "forbidden": "Access forbidden",
+    "validation_error": "Validation error",
+    "internal_error": "Internal server error",
+    "rate_limited": "Too many requests. Please try again later."
+  }
+}

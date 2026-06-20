@@ -1,0 +1,59 @@
+[project]
+name = "ai-interview-agent-api"
+version = "0.1.0"
+description = "AI Interview Agent - FastAPI Backend"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "PyJWT>=2.10.0",
+    "email-validator>=2.2.0",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt>=4.1.3",
+    "python-multipart>=0.0.18",
+    "redis>=5.2.0",
+    "httpx>=0.28.0",
+    "boto3>=1.35.0",
+    "pdfplumber>=0.10.0",
+    "PyPDF2>=3.0.0",
+    "openai>=1.6.0",
+    "celery[redis]>=5.4.0",
+    "faster-whisper>=1.0.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    "gTTS>=2.5.0",
+    "pyttsx3>=2.90",
+    "icalendar>=7.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+video = [
+    "deepface>=0.0.80",
+    "tf-keras>=2.15.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

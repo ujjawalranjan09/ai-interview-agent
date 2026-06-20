@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline — AI Interview Agent</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f8fafc; color: #1e293b; }
+    .container { text-align: center; padding: 2rem; max-width: 400px; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p { color: #64748b; margin-bottom: 1.5rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 0.5rem; font-size: 1rem; cursor: pointer; text-decoration: none; }
+    .btn:hover { background: #2563eb; }
+    .features { text-align: left; margin-top: 2rem; padding: 1rem; background: #f1f5f9; border-radius: 0.5rem; }
+    .features h3 { font-size: 0.875rem; margin-bottom: 0.5rem; }
+    .features ul { margin: 0; padding-left: 1.25rem; font-size: 0.875rem; color: #475569; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>You are offline</h1>
+    <p>Please check your connection and try again.</p>
+    <button class="btn" onclick="window.location.reload()">Retry</button>
+    <div class="features">
+      <h3>Features available offline:</h3>
+      <ul>
+        <li>View cached interviews</li>
+        <li>View cached reports</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

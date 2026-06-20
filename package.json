@@ -1,0 +1,14 @@
+{
+  "name": "ai-interview-agent",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "cd apps/api && uvicorn app.main:app --reload",
+    "dev": "concurrently \"pnpm dev:web\" \"pnpm dev:api\"",
+    "lint": "pnpm --filter web lint && cd apps/api && ruff check .",
+    "typecheck": "pnpm --filter web typecheck && cd apps/api && mypy ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
